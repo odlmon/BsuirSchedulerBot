@@ -1,39 +1,18 @@
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
-import org.telegram.telegrambots.meta.api.methods.send.SendSticker;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.io.File;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
 
 public class BsuirSchedulerBot extends TelegramLongPollingBot {
 
-    private RequestHandler requestHandler = new RequestHandler();
-
-    private void sendMessage(Update update, String text) {
-        SendMessage message = new SendMessage() // Create a SendMessage object with mandatory fields
-                .setChatId(update.getMessage().getChatId())
-                .setText(text);
-        try {
-            execute(message); // Call method to send the message
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void sendPicture(Update update, String id) {
-        SendPhoto message = new SendPhoto()
-                .setChatId(update.getMessage().getChatId())
-                .setPhoto(new File("C:\\Users\\Mi\\Pictures\\Memes\\" + id + ".jfif"));
-        try {
-            execute(message); // Call method to send the message
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-    }
+    private final ScheduleHandler scheduleHandler = new ScheduleHandler();
 
     public String getBotToken() {
         return "1128392990:AAHS_fOam2gH7JiZPjNo0ELFN2kHXqprhmM";
@@ -43,52 +22,55 @@ public class BsuirSchedulerBot extends TelegramLongPollingBot {
         // We check if the update has a message and the message has text
         if (update.hasMessage() && update.getMessage().hasText()) {
             User user = update.getMessage().getFrom();
-            System.out.println(user.getFirstName() + " " + user.getLastName() + ": " +
-                    update.getMessage().getText());
             String text = update.getMessage().getText();
-            if (text.toLowerCase().matches("аче\\)*")) {
-                sendMessage(update, "Ниче");
-            } else if (text.toLowerCase().matches("оло\\)*")) {
-                sendMessage(update, "Дроу)))");
-            } else if (text.toLowerCase().matches("ты че\\)*")) {
-                sendMessage(update, "Аче");
-            } else if (text.matches("/start")) {
-                sendMessage(update, "Стартуем!");
-                SendSticker message = new SendSticker()
+            System.out.println(user.getFirstName() + " " + user.getLastName() + ": " + text);
+            String answer = scheduleHandler.getScheduleString(text, null, SchedulePeriod.DAY);
+            SendMessage message;
+            if (answer == null) {
+                message = new SendMessage()
                         .setChatId(update.getMessage().getChatId())
-                        .setSticker("CAACAgQAAxkBAAI22l55EcRaBMQT8gJgR6LUZKzTqB_CAAJkAAOodxIAAQT5BNcd-V0GGAQ");
-                try {
-                    execute(message); // Call method to send the message
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
-                sendMessage(update, "Заплати номером группы...");
-            } else if (!text.toLowerCase().matches("\\d\\d\\d\\d\\d\\d")) {
-                int random = new Random().nextInt(100);
-                sendPicture(update, Integer.toString(random));
+                        .setText("Такой группы не существует");
             } else {
-                SendMessage message = new SendMessage() // Create a SendMessage object with mandatory fields
+                message = new SendMessage()
                         .setChatId(update.getMessage().getChatId())
-                        .setText(requestHandler.getScheduleResponse(update.getMessage().getText()));
-                try {
-                    execute(message); // Call method to send the message
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
+                        .setText(answer);
+                InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+                List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+                List<InlineKeyboardButton> rowInline = new ArrayList<>();
+                rowInline.add(new InlineKeyboardButton()
+                        .setText("Расписание на неделю")
+                        .setCallbackData("week_" + text));
+                rowsInline.add(rowInline);
+                markupInline.setKeyboard(rowsInline);
+                message.setReplyMarkup(markupInline);
             }
-        } else if (update.hasMessage() && update.getMessage().hasSticker()) {
-            SendSticker message = new SendSticker() // Create a SendMessage object with mandatory fields
-                    .setChatId(update.getMessage().getChatId())
-                    .setSticker(String.valueOf(update.getMessage().getSticker().getFileId()));
             try {
                 execute(message); // Call method to send the message
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
+        } else if (update.hasCallbackQuery()) {
+            String callbackData = update.getCallbackQuery().getData();
+            long messageId = update.getCallbackQuery().getMessage().getMessageId();
+            long chatId = update.getCallbackQuery().getMessage().getChatId();
+            String text = callbackData.split("_")[1];
+            System.out.println(text);
+            if (callbackData.startsWith("week")) {
+                String answer = scheduleHandler.getScheduleString(text, null, SchedulePeriod.WEEK);
+                EditMessageText newMessage = new EditMessageText()
+                        .setChatId(chatId)
+                        .setMessageId((int) messageId)
+                        .setText(answer);
+                try {
+                    execute(newMessage);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
     public String getBotUsername() {
-        return "BsuirSchedulerBot";
+        return "Расписание БГУИР";
     }
 }
