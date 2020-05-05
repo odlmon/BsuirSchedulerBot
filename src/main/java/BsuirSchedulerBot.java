@@ -8,6 +8,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class BsuirSchedulerBot extends TelegramLongPollingBot {
@@ -18,22 +19,38 @@ public class BsuirSchedulerBot extends TelegramLongPollingBot {
         return "1128392990:AAHS_fOam2gH7JiZPjNo0ELFN2kHXqprhmM";
     }
 
+    private InlineKeyboardMarkup generateInlineKeyBoard(String answer, String groupNumber) {
+        String week = answer
+                .lines()
+                .filter(str -> str.startsWith("Выбранная неделя:"))
+                .findFirst().get().split(" ")[2];
+        var weeks = new ArrayList<>(Arrays.asList("1", "2", "3", "4"));
+        weeks.remove(week);
+        System.out.println(week);
+        var markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+        weeks.forEach(item -> rowInline.add(new InlineKeyboardButton()
+                    .setText(item)
+                    .setCallbackData("full_" + item + "_" + groupNumber)));
+        rowsInline.add(rowInline);
+        markupInline.setKeyboard(rowsInline);
+        return markupInline;
+    }
+
     public void onUpdateReceived(Update update) {
         // We check if the update has a message and the message has text
         if (update.hasMessage() && update.getMessage().hasText()) {
             User user = update.getMessage().getFrom();
+            Long chatId = update.getMessage().getChatId();
             String text = update.getMessage().getText();
             System.out.println(user.getFirstName() + " " + user.getLastName() + ": " + text);
             String answer = scheduleHandler.getScheduleString(text, null, SchedulePeriod.DAY);
             SendMessage message;
             if (answer == null) {
-                message = new SendMessage()
-                        .setChatId(update.getMessage().getChatId())
-                        .setText("Такой группы не существует");
+                message = new SendMessage(chatId, "Такой группы не существует");
             } else {
-                message = new SendMessage()
-                        .setChatId(update.getMessage().getChatId())
-                        .setText(answer);
+                message = new SendMessage(chatId, answer);
                 InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
                 List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
                 List<InlineKeyboardButton> rowInline = new ArrayList<>();
@@ -53,14 +70,17 @@ public class BsuirSchedulerBot extends TelegramLongPollingBot {
             String callbackData = update.getCallbackQuery().getData();
             long messageId = update.getCallbackQuery().getMessage().getMessageId();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
-            String text = callbackData.split("_")[1];
-            System.out.println(text);
             if (callbackData.startsWith("week")) {
-                String answer = scheduleHandler.getScheduleString(text, null, SchedulePeriod.WEEK);
-                EditMessageText newMessage = new EditMessageText()
+                String groupNumber = callbackData.split("_")[1];
+                System.out.println(groupNumber);
+                String answer = scheduleHandler.getScheduleString(groupNumber,
+                        null, SchedulePeriod.WEEK);
+                var newMessage = new EditMessageText()
                         .setChatId(chatId)
                         .setMessageId((int) messageId)
                         .setText(answer);
+                InlineKeyboardMarkup markupInline = generateInlineKeyBoard(answer, groupNumber);
+                newMessage.setReplyMarkup(markupInline);
                 try {
                     execute(newMessage);
                 } catch (TelegramApiException e) {
