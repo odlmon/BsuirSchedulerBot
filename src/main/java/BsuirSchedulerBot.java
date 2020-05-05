@@ -86,8 +86,50 @@ public class BsuirSchedulerBot extends TelegramLongPollingBot {
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
+            } else if (callbackData.startsWith("full")) {
+                String week = callbackData.split("_")[1];
+                String groupNumber = callbackData.split("_")[2];
+                System.out.println(week + " " + groupNumber);
+                String answer = scheduleHandler.getScheduleString(groupNumber,
+                        week, SchedulePeriod.WEEK);
+                var newMessage = new EditMessageText()
+                        .setChatId(chatId)
+                        .setMessageId((int) messageId)
+                        .setText(answer);
+                InlineKeyboardMarkup markupInline = generateInlineKeyBoard(answer, groupNumber);
+                newMessage.setReplyMarkup(markupInline);
+                try {
+                    execute(newMessage);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
             }
         }
+
+//            if (update.getMessage().getText().equals("repeat")) {
+//                Runnable task = () -> {
+//                    SendMessage message = new SendMessage()
+//                            .setChatId(update.getMessage().getChatId())
+//                            .setText("repeat every 5 sec");
+//                    try {
+//                        execute(message); // Call method to send the message
+//                    } catch (TelegramApiException e) {
+//                        e.printStackTrace();
+//                    }
+//                };
+//                ScheduledExecutorService ses = Executors.newScheduledThreadPool(1);
+//                ses.scheduleAtFixedRate(task, 0, 5, TimeUnit.SECONDS);
+//            } else {
+//                SendMessage message = new SendMessage() // Create a SendMessage object with mandatory fields
+//                        .setChatId(update.getMessage().getChatId())
+//                        .setText();
+//                try {
+//                    execute(message); // Call method to send the message
+//                } catch (TelegramApiException e) {
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
     }
 
     public String getBotUsername() {
