@@ -1,4 +1,4 @@
-import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.extensions.bots.commandbot.TelegramLongPollingCommandBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -11,12 +11,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class BsuirSchedulerBot extends TelegramLongPollingBot {
+public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
 
     private final ScheduleHandler scheduleHandler = new ScheduleHandler();
 
     public String getBotToken() {
         return "1128392990:AAHS_fOam2gH7JiZPjNo0ELFN2kHXqprhmM";
+    }
+
+    public BsuirSchedulerBot() {
+        register(new StartCommand());
     }
 
     private InlineKeyboardMarkup generateInlineKeyBoard(String answer, String groupNumber) {
@@ -38,7 +42,7 @@ public class BsuirSchedulerBot extends TelegramLongPollingBot {
         return markupInline;
     }
 
-    public void onUpdateReceived(Update update) {
+    public void processNonCommandUpdate(Update update) {
         // We check if the update has a message and the message has text
         if (update.hasMessage() && update.getMessage().hasText()) {
             User user = update.getMessage().getFrom();
@@ -133,6 +137,6 @@ public class BsuirSchedulerBot extends TelegramLongPollingBot {
     }
 
     public String getBotUsername() {
-        return "Расписание БГУИР";
+        return "@bsuirschedulerbot";
     }
 }

@@ -34,6 +34,12 @@
             <version>20180813</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.telegram</groupId>
+            <artifactId>telegrambotsextensions</artifactId>
+            <version>4.8.1</version>
+        </dependency>
+
     </dependencies>
 
 
