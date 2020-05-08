@@ -1,3 +1,8 @@
+import command.AddCommand;
+import command.DeleteCommand;
+import command.GroupsCommand;
+import command.StartCommand;
+import database.DatabaseManager;
 import org.telegram.telegrambots.extensions.bots.commandbot.TelegramLongPollingCommandBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
@@ -6,6 +11,8 @@ import org.telegram.telegrambots.meta.api.objects.User;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import schedule.ScheduleHandler;
+import schedule.SchedulePeriod;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,6 +28,9 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
 
     public BsuirSchedulerBot() {
         register(new StartCommand());
+        register(new AddCommand());
+        register(new GroupsCommand());
+        register(new DeleteCommand());
     }
 
     private InlineKeyboardMarkup generateInlineKeyBoard(String answer, String groupNumber) {
@@ -40,6 +50,91 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
         rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
         return markupInline;
+    }
+
+    private void weekCallback(String callbackData, long messageId, long chatId) {
+        String groupNumber = callbackData.split("_")[1];
+        System.out.println(groupNumber);
+        String answer = scheduleHandler.getScheduleString(groupNumber,
+                null, SchedulePeriod.WEEK);
+        var newMessage = new EditMessageText()
+                .setChatId(chatId)
+                .setMessageId((int) messageId)
+                .setText(answer);
+        InlineKeyboardMarkup markupInline = generateInlineKeyBoard(answer, groupNumber);
+        newMessage.setReplyMarkup(markupInline);
+        try {
+            execute(newMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void fullCallback(String callbackData, long messageId, long chatId) {
+        String week = callbackData.split("_")[1];
+        String groupNumber = callbackData.split("_")[2];
+        System.out.println(week + " " + groupNumber);
+        String answer = scheduleHandler.getScheduleString(groupNumber,
+                week, SchedulePeriod.WEEK);
+        var newMessage = new EditMessageText()
+                .setChatId(chatId)
+                .setMessageId((int) messageId)
+                .setText(answer);
+        InlineKeyboardMarkup markupInline = generateInlineKeyBoard(answer, groupNumber);
+        newMessage.setReplyMarkup(markupInline);
+        try {
+            execute(newMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void groupsCallback(String callbackData, long messageId, long chatId) {
+        String groupNumber = callbackData.split("_")[1];
+        String answer = scheduleHandler.getScheduleString(groupNumber, null, SchedulePeriod.DAY);
+        EditMessageText newMessage;
+        if (answer == null) {
+            newMessage = new EditMessageText()
+                    .setChatId(chatId)
+                    .setMessageId((int) messageId)
+                    .setText("Такой группы не существует");
+        } else {
+            newMessage = new EditMessageText()
+                    .setChatId(chatId)
+                    .setMessageId((int) messageId)
+                    .setText(answer);
+            InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+            List<InlineKeyboardButton> rowInline = new ArrayList<>();
+            rowInline.add(new InlineKeyboardButton()
+                    .setText("Расписание на неделю")
+                    .setCallbackData("week_" + groupNumber));
+            rowsInline.add(rowInline);
+            markupInline.setKeyboard(rowsInline);
+            newMessage.setReplyMarkup(markupInline);
+        }
+        try {
+            execute(newMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void deleteCallback(String callbackData, long messageId, long chatId) {
+        String groupNumber = callbackData.split("_")[1];
+        var newMessage = new EditMessageText()
+                .setChatId(chatId)
+                .setMessageId((int) messageId);
+        if (DatabaseManager.deleteUserGroup(chatId, groupNumber)) {
+            newMessage.setText("Группа успешно удалена");
+        } else {
+            newMessage.setText("Не удалось удалить группу");
+        }
+        try {
+            execute(newMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     public void processNonCommandUpdate(Update update) {
@@ -75,38 +170,13 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
             long messageId = update.getCallbackQuery().getMessage().getMessageId();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
             if (callbackData.startsWith("week")) {
-                String groupNumber = callbackData.split("_")[1];
-                System.out.println(groupNumber);
-                String answer = scheduleHandler.getScheduleString(groupNumber,
-                        null, SchedulePeriod.WEEK);
-                var newMessage = new EditMessageText()
-                        .setChatId(chatId)
-                        .setMessageId((int) messageId)
-                        .setText(answer);
-                InlineKeyboardMarkup markupInline = generateInlineKeyBoard(answer, groupNumber);
-                newMessage.setReplyMarkup(markupInline);
-                try {
-                    execute(newMessage);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
+                weekCallback(callbackData, messageId, chatId);
             } else if (callbackData.startsWith("full")) {
-                String week = callbackData.split("_")[1];
-                String groupNumber = callbackData.split("_")[2];
-                System.out.println(week + " " + groupNumber);
-                String answer = scheduleHandler.getScheduleString(groupNumber,
-                        week, SchedulePeriod.WEEK);
-                var newMessage = new EditMessageText()
-                        .setChatId(chatId)
-                        .setMessageId((int) messageId)
-                        .setText(answer);
-                InlineKeyboardMarkup markupInline = generateInlineKeyBoard(answer, groupNumber);
-                newMessage.setReplyMarkup(markupInline);
-                try {
-                    execute(newMessage);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
+                fullCallback(callbackData, messageId, chatId);
+            } else if (callbackData.startsWith("groups")) {
+                groupsCallback(callbackData, messageId, chatId);
+            } else if (callbackData.startsWith("delete")) {
+                deleteCallback(callbackData, messageId, chatId);
             }
         }
 

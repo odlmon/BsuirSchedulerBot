@@ -1,3 +1,5 @@
+package connection;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -9,7 +11,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 
-public class JsonReader {
+public class UrlReader {
 
     public static JSONObject readJsonFromUrl(String url) {
         try (InputStream is = new URL(url).openStream()) {

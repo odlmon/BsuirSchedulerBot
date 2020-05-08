@@ -1,3 +1,6 @@
+package schedule;
+
+import connection.UrlReader;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -47,7 +50,7 @@ public class ScheduleHandler {
 
     private Schedule getSchedule(String groupNumber, String weekNumber) {
         try {
-            JSONObject jsonObject = JsonReader.readJsonFromUrl(scheduleUrlBase + groupNumber);
+            JSONObject jsonObject = UrlReader.readJsonFromUrl(scheduleUrlBase + groupNumber);
             if (jsonObject != null) {
                 if (weekNumber == null) {
                     weekNumber = jsonObject.getNumber("currentWeekNumber").toString();
@@ -55,9 +58,7 @@ public class ScheduleHandler {
                 var days = new ArrayList<String>();
                 JSONArray schedules = jsonObject.getJSONArray("schedules");
                 String finalWeekNumber = weekNumber;
-                schedules.forEach(schedulesItem -> {
-                    days.add(getDay((JSONObject) schedulesItem, finalWeekNumber));
-                });
+                schedules.forEach(schedulesItem -> days.add(getDay((JSONObject) schedulesItem, finalWeekNumber)));
                 return new Schedule(weekNumber, days);
             } else {
                 return null;
@@ -66,6 +67,11 @@ public class ScheduleHandler {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public boolean isGroupExists(String groupNumber) {
+        JSONObject jsonObject = UrlReader.readJsonFromUrl(scheduleUrlBase + groupNumber);
+        return jsonObject != null;
     }
 
     private String parseIntDay(int day) {
