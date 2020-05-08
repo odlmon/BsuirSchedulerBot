@@ -10,6 +10,38 @@ public class DatabaseManager {
     private static final String userName = "root";
     private static final String password = "root";
 
+    public static final byte userGroupLimit = 10;
+
+    public static boolean isUserGroupPresentInList(long chatId, String groupNumber) {
+        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
+            PreparedStatement statement = connection.prepareStatement(
+                    "SELECT group_number FROM user_groups WHERE chat_id=? AND group_number=?");
+            statement.setLong(1, chatId);
+            statement.setString(2, groupNumber);
+            return statement.executeQuery().next();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean isUserGroupLimitOver(long chatId) {
+        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
+            PreparedStatement statement = connection.prepareStatement(
+                    "SELECT group_number FROM user_groups WHERE chat_id=?");
+            statement.setLong(1, chatId);
+            int count = 0;
+            ResultSet resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                count++;
+            }
+            return count == userGroupLimit;
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return false;
+        }
+    }
+
     public static void addUserGroup(long chatId, String groupNumber) {
         try (Connection connection = DriverManager.getConnection(url, userName, password)) {
             PreparedStatement statement = connection.prepareStatement(

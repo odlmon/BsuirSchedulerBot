@@ -24,12 +24,18 @@ public class AddCommand extends BotCommand {
             answer.setText("Формат вызова команды /add <номер_группы>");
         } else {
             String input = strings[0];
-//          TODO: add check records for collisions and add limit ~10
-            if (input.matches("\\d{6}") && scheduleHandler.isGroupExists(input)) {
+            if (!input.matches("\\d{6}")) {
+                answer.setText("Номер группы должен содержать 6 цифр");
+            } else if (!scheduleHandler.isGroupExists(input)) {
+                answer.setText("Такой группы не существует");
+            } else if (DatabaseManager.isUserGroupPresentInList(chat.getId(), input)) {
+                answer.setText("Такая группа уже содержится в вашем списке");
+            } else if (DatabaseManager.isUserGroupLimitOver(chat.getId())) {
+                answer.setText("Группа не добавлена: достигнуто максимальное количество групп в списке (" +
+                        DatabaseManager.userGroupLimit + ")");
+            } else {
                 DatabaseManager.addUserGroup(chat.getId(), input);
                 answer.setText("Группа успешно добавлена в Ваш список");
-            } else {
-                answer.setText("Такой группы не существует");
             }
         }
         try {
