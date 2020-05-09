@@ -1,7 +1,4 @@
-import command.AddCommand;
-import command.DeleteCommand;
-import command.GroupsCommand;
-import command.StartCommand;
+import command.*;
 import database.DatabaseManager;
 import org.telegram.telegrambots.extensions.bots.commandbot.TelegramLongPollingCommandBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -31,6 +28,7 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
         register(new AddCommand());
         register(new GroupsCommand());
         register(new DeleteCommand());
+        register(new HelpCommand());
     }
 
     private InlineKeyboardMarkup generateInlineKeyBoard(String answer, String groupNumber) {
@@ -50,6 +48,34 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
         rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
         return markupInline;
+    }
+
+    private void nonCommandCall(Update update) {
+        User user = update.getMessage().getFrom();
+        Long chatId = update.getMessage().getChatId();
+        String text = update.getMessage().getText();
+        System.out.println(user.getFirstName() + " " + user.getLastName() + ": " + text);
+        String answer = scheduleHandler.getScheduleString(text, null, SchedulePeriod.DAY);
+        SendMessage message;
+        if (answer == null) {
+            message = new SendMessage(chatId, "Такой группы не существует");
+        } else {
+            message = new SendMessage(chatId, answer);
+            InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+            List<InlineKeyboardButton> rowInline = new ArrayList<>();
+            rowInline.add(new InlineKeyboardButton()
+                    .setText("Расписание на неделю")
+                    .setCallbackData("week_" + text));
+            rowsInline.add(rowInline);
+            markupInline.setKeyboard(rowsInline);
+            message.setReplyMarkup(markupInline);
+        }
+        try {
+            execute(message); // Call method to send the message
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     private void weekCallback(String callbackData, long messageId, long chatId) {
@@ -140,31 +166,7 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
     public void processNonCommandUpdate(Update update) {
         // We check if the update has a message and the message has text
         if (update.hasMessage() && update.getMessage().hasText()) {
-            User user = update.getMessage().getFrom();
-            Long chatId = update.getMessage().getChatId();
-            String text = update.getMessage().getText();
-            System.out.println(user.getFirstName() + " " + user.getLastName() + ": " + text);
-            String answer = scheduleHandler.getScheduleString(text, null, SchedulePeriod.DAY);
-            SendMessage message;
-            if (answer == null) {
-                message = new SendMessage(chatId, "Такой группы не существует");
-            } else {
-                message = new SendMessage(chatId, answer);
-                InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-                List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-                List<InlineKeyboardButton> rowInline = new ArrayList<>();
-                rowInline.add(new InlineKeyboardButton()
-                        .setText("Расписание на неделю")
-                        .setCallbackData("week_" + text));
-                rowsInline.add(rowInline);
-                markupInline.setKeyboard(rowsInline);
-                message.setReplyMarkup(markupInline);
-            }
-            try {
-                execute(message); // Call method to send the message
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
+            nonCommandCall(update);
         } else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
             long messageId = update.getCallbackQuery().getMessage().getMessageId();
