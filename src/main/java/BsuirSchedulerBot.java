@@ -11,13 +11,16 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import schedule.ScheduleHandler;
 import schedule.SchedulePeriod;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
 
     private final ScheduleHandler scheduleHandler = new ScheduleHandler();
+
+    public static Map<Long, Map<String, ScheduledExecutorService>> notifiedGroups = new HashMap<>();
 
     public String getBotToken() {
         return "1128392990:AAHS_fOam2gH7JiZPjNo0ELFN2kHXqprhmM";
@@ -28,7 +31,18 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
         register(new AddCommand());
         register(new GroupsCommand());
         register(new DeleteCommand());
+        register(new NotifyCommand());
         register(new HelpCommand());
+        restoreNotifiedGroups();
+    }
+
+    private void restoreNotifiedGroups() {
+        Map<Long, List<String>> rawGroups = DatabaseManager.allGroupNotifications();
+        rawGroups.forEach((key, value) -> {
+            Map<String, ScheduledExecutorService> notifyServices = new HashMap<>();
+            value.forEach(group -> notifyServices.put(group, getService(key, group)));
+            notifiedGroups.put(key, notifyServices);
+        });
     }
 
     private InlineKeyboardMarkup generateInlineKeyBoard(String answer, String groupNumber) {
@@ -43,8 +57,8 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
         weeks.forEach(item -> rowInline.add(new InlineKeyboardButton()
-                    .setText(item)
-                    .setCallbackData("full_" + item + "_" + groupNumber)));
+                .setText(item)
+                .setCallbackData("full_" + item + "_" + groupNumber)));
         rowsInline.add(rowInline);
         markupInline.setKeyboard(rowsInline);
         return markupInline;
@@ -72,7 +86,7 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
             message.setReplyMarkup(markupInline);
         }
         try {
-            execute(message); // Call method to send the message
+            execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
@@ -163,8 +177,70 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
         }
     }
 
+    private Runnable getTask(long chatId, String groupNumber) {
+        return () -> {
+            String answer = scheduleHandler.getScheduleString(groupNumber, null, SchedulePeriod.DAY);
+            var message = new SendMessage(chatId, answer);
+            InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+            List<InlineKeyboardButton> rowInline = new ArrayList<>();
+            rowInline.add(new InlineKeyboardButton()
+                    .setText("Расписание на неделю")
+                    .setCallbackData("week_" + groupNumber));
+            rowsInline.add(rowInline);
+            markupInline.setKeyboard(rowsInline);
+            message.setReplyMarkup(markupInline);
+            try {
+                execute(message);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+        };
+    }
+
+    private ScheduledExecutorService getService(long chatId, String groupNumber) {
+        ScheduledExecutorService ses = Executors.newScheduledThreadPool(1);
+        var date = new Date();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        int hours = calendar.get(Calendar.HOUR_OF_DAY);
+        int minutes = calendar.get(Calendar.MINUTE);
+        int dayInSeconds = 24 * 60 * 60;
+        int delay = dayInSeconds - (hours * 60 + minutes) * 60;
+        ses.scheduleAtFixedRate(getTask(chatId, groupNumber), delay, dayInSeconds, TimeUnit.SECONDS);
+        return ses;
+    }
+
+    private void notifyCallback(String callbackData, long messageId, long chatId) {
+        String groupNumber = callbackData.split("_")[1];
+        boolean isNotified = Boolean.parseBoolean(callbackData.split("_")[2]);
+        if (isNotified) {
+            DatabaseManager.deleteGroupNotification(chatId, groupNumber);
+            notifiedGroups.get(chatId).get(groupNumber).shutdown();
+            notifiedGroups.get(chatId).clear();
+        } else {
+            DatabaseManager.addGroupNotification(chatId, groupNumber);
+            ScheduledExecutorService ses = getService(chatId, groupNumber);
+            if (notifiedGroups.containsKey(chatId)) {
+                notifiedGroups.get(chatId).put(groupNumber, ses);
+            } else {
+                Map<String, ScheduledExecutorService> notifyServices = new HashMap<>();
+                notifyServices.put(groupNumber, ses);
+                notifiedGroups.put(chatId, notifyServices);
+            }
+        }
+        var newMessage = new EditMessageText()
+                .setChatId(chatId)
+                .setMessageId((int) messageId)
+                .setText("Изменения успешно применены");
+        try {
+            execute(newMessage);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void processNonCommandUpdate(Update update) {
-        // We check if the update has a message and the message has text
         if (update.hasMessage() && update.getMessage().hasText()) {
             nonCommandCall(update);
         } else if (update.hasCallbackQuery()) {
@@ -179,33 +255,10 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
                 groupsCallback(callbackData, messageId, chatId);
             } else if (callbackData.startsWith("delete")) {
                 deleteCallback(callbackData, messageId, chatId);
+            } else if (callbackData.startsWith("notify")) {
+                notifyCallback(callbackData, messageId, chatId);
             }
         }
-
-//            if (update.getMessage().getText().equals("repeat")) {
-//                Runnable task = () -> {
-//                    SendMessage message = new SendMessage()
-//                            .setChatId(update.getMessage().getChatId())
-//                            .setText("repeat every 5 sec");
-//                    try {
-//                        execute(message); // Call method to send the message
-//                    } catch (TelegramApiException e) {
-//                        e.printStackTrace();
-//                    }
-//                };
-//                ScheduledExecutorService ses = Executors.newScheduledThreadPool(1);
-//                ses.scheduleAtFixedRate(task, 0, 5, TimeUnit.SECONDS);
-//            } else {
-//                SendMessage message = new SendMessage() // Create a SendMessage object with mandatory fields
-//                        .setChatId(update.getMessage().getChatId())
-//                        .setText();
-//                try {
-//                    execute(message); // Call method to send the message
-//                } catch (TelegramApiException e) {
-//                    e.printStackTrace();
-//                }
-//            }
-//        }
     }
 
     public String getBotUsername() {

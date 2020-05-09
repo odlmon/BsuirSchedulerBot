@@ -1,10 +1,8 @@
 package database;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Calendar;
+import java.util.*;
 import java.util.Date;
-import java.util.List;
 
 public class DatabaseManager {
 
@@ -14,6 +12,67 @@ public class DatabaseManager {
 
     public static final byte userGroupLimit = 10;
     public static final byte cacheTtlInDays = 1;
+
+    public static Map<Long, List<String>> allGroupNotifications() {
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT chat_id, group_number FROM notified_groups")) {
+            ResultSet resultSet = statement.executeQuery();
+            Map<Long, List<String>> notifiedGroups = new HashMap<>();
+            while (resultSet.next()) {
+                long chatId = resultSet.getLong("chat_id");
+                if (notifiedGroups.containsKey(chatId)) {
+                    notifiedGroups.get(chatId).add(resultSet.getString("group_number"));
+                } else {
+                    List<String> list = new ArrayList<>();
+                    list.add(resultSet.getString("group_number"));
+                    notifiedGroups.put(chatId, list);
+                }
+            }
+            resultSet.close();
+            return notifiedGroups;
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return new HashMap<>();
+        }
+    }
+
+    public static void addGroupNotification(long chatId, String groupNumber) {
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "INSERT INTO notified_groups (chat_id, group_number) VALUES (?, ?)")) {
+            statement.setLong(1, chatId);
+            statement.setString(2, groupNumber);
+            statement.execute();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+    }
+
+    public static void deleteGroupNotification(long chatId, String groupNumber) {
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "DELETE FROM notified_groups WHERE chat_id=? AND group_number=?")) {
+            statement.setLong(1, chatId);
+            statement.setString(2, groupNumber);
+            statement.execute();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
+    }
+
+    public static boolean isGroupNotified(long chatId, String groupNumber) {
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT group_number FROM notified_groups WHERE chat_id=? AND group_number=?")) {
+            statement.setLong(1, chatId);
+            statement.setString(2, groupNumber);
+            return statement.executeQuery().next();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            return false;
+        }
+    }
 
     private static void deleteExpiredCache(String groupNumber) {
         try (Connection connection = DriverManager.getConnection(url, userName, password);
