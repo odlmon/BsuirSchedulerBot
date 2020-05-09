@@ -16,9 +16,9 @@ public class DatabaseManager {
     public static final byte cacheTtlInDays = 1;
 
     private static void deleteExpiredCache(String groupNumber) {
-        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "DELETE FROM schedule_cache WHERE group_number=?");
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "DELETE FROM schedule_cache WHERE group_number=?")) {
             statement.setString(1, groupNumber);
             statement.execute();
         } catch (SQLException throwables) {
@@ -27,9 +27,9 @@ public class DatabaseManager {
     }
 
     public static String checkoutScheduleInCache(String groupNumber) {
-        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "SELECT schedule, expires FROM schedule_cache WHERE group_number=?");
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT schedule, expires FROM schedule_cache WHERE group_number=?")) {
             statement.setString(1, groupNumber);
             ResultSet resultSet = statement.executeQuery();
             String schedule = "";
@@ -40,6 +40,7 @@ public class DatabaseManager {
                     deleteExpiredCache(groupNumber);
                 }
             }
+            resultSet.close();
             return schedule.isEmpty() ? null : schedule;
         } catch (SQLException throwables) {
             throwables.printStackTrace();
@@ -48,9 +49,9 @@ public class DatabaseManager {
     }
 
     public static void addScheduleInCache(String groupNumber, String schedule) {
-        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "INSERT INTO schedule_cache (group_number, schedule, expires) VALUES (?, ?, ?)");
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "INSERT INTO schedule_cache (group_number, schedule, expires) VALUES (?, ?, ?)")) {
             statement.setString(1, groupNumber);
             statement.setString(2, schedule);
             var date = new Date();
@@ -65,9 +66,9 @@ public class DatabaseManager {
     }
 
     public static boolean isUserGroupPresentInList(long chatId, String groupNumber) {
-        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "SELECT group_number FROM user_groups WHERE chat_id=? AND group_number=?");
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT group_number FROM user_groups WHERE chat_id=? AND group_number=?")) {
             statement.setLong(1, chatId);
             statement.setString(2, groupNumber);
             return statement.executeQuery().next();
@@ -78,15 +79,16 @@ public class DatabaseManager {
     }
 
     public static boolean isUserGroupLimitOver(long chatId) {
-        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "SELECT group_number FROM user_groups WHERE chat_id=?");
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT group_number FROM user_groups WHERE chat_id=?")) {
             statement.setLong(1, chatId);
             int count = 0;
             ResultSet resultSet = statement.executeQuery();
             while (resultSet.next()) {
                 count++;
             }
+            resultSet.close();
             return count == userGroupLimit;
         } catch (SQLException throwables) {
             throwables.printStackTrace();
@@ -95,9 +97,9 @@ public class DatabaseManager {
     }
 
     public static void addUserGroup(long chatId, String groupNumber) {
-        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "INSERT INTO user_groups (chat_id, group_number) VALUES (?, ?)");
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "INSERT INTO user_groups (chat_id, group_number) VALUES (?, ?)")) {
             statement.setLong(1, chatId);
             statement.setString(2, groupNumber);
             statement.execute();
@@ -107,9 +109,9 @@ public class DatabaseManager {
     }
 
     public static boolean deleteUserGroup(long chatId, String groupNumber) {
-        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
-            PreparedStatement statement = connection.prepareStatement(
-                    "DELETE FROM user_groups WHERE chat_id=? AND group_number=?");
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "DELETE FROM user_groups WHERE chat_id=? AND group_number=?")) {
             statement.setLong(1, chatId);
             statement.setString(2, groupNumber);
             statement.execute();
@@ -121,14 +123,16 @@ public class DatabaseManager {
     }
 
     public static List<String> getAddedGroups(long chatId) {
-        try (Connection connection = DriverManager.getConnection(url, userName, password)) {
-            Statement statement = connection.createStatement();
-            ResultSet resultSet = statement.executeQuery("SELECT group_number FROM user_groups WHERE chat_id = " +
-                    chatId);
+        try (Connection connection = DriverManager.getConnection(url, userName, password);
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT group_number FROM user_groups WHERE chat_id=?")) {
+            statement.setLong(1, chatId);
+            ResultSet resultSet = statement.executeQuery();
             var list = new ArrayList<String>();
             while (resultSet.next()) {
                 list.add(resultSet.getString("group_number"));
             }
+            resultSet.close();
             return list;
         } catch (SQLException throwables) {
             throwables.printStackTrace();
