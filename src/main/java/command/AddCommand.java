@@ -21,7 +21,7 @@ public class AddCommand extends BotCommand {
     public void execute(AbsSender absSender, User user, Chat chat, String[] strings) {
         var answer = new SendMessage().setChatId(chat.getId());
         if (strings.length != 1) {
-            answer.setText("Формат вызова команды /add <номер_группы>");
+            answer.setText("Формат вызова команды /add &lt;<i>номер_группы</i>&gt;").enableHtml(true);
         } else {
             String input = strings[0];
             if (!input.matches("\\d{6}")) {
