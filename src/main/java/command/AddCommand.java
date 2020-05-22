@@ -32,7 +32,7 @@ public class AddCommand extends BotCommand {
                 answer.setText("Такая группа уже содержится в вашем списке");
             } else if (DatabaseManager.isUserGroupLimitOver(chat.getId())) {
                 answer.setText("Группа не добавлена: достигнуто максимальное количество групп в списке (" +
-                        DatabaseManager.userGroupLimit + ")");
+                        DatabaseManager.USER_GROUP_LIMIT + ")");
             } else {
                 DatabaseManager.addUserGroup(chat.getId(), input);
                 answer.setText("Группа успешно добавлена в Ваш список");

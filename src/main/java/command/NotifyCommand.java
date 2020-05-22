@@ -16,8 +16,8 @@ import java.util.List;
 
 public class NotifyCommand extends BotCommand {
 
-    private static final String positive = ":white_check_mark:";
-    private static final String negative = ":negative_squared_cross_mark:";
+    private static final String POSITIVE = ":white_check_mark:";
+    private static final String NEGATIVE = ":negative_squared_cross_mark:";
 
     public NotifyCommand() {
         super("notify", "Установить оповещение для группы из списка");
@@ -38,8 +38,8 @@ public class NotifyCommand extends BotCommand {
                 List<InlineKeyboardButton> rowInline = new ArrayList<>();
                 boolean isNotified = DatabaseManager.isGroupNotified(chat.getId(), group);
                 rowInline.add(new InlineKeyboardButton()
-                        .setText(group + EmojiParser.parseToUnicode(isNotified ? positive : negative))
-                        .setCallbackData("notify_%s_%s".formatted(group, isNotified)));
+                        .setText(group + EmojiParser.parseToUnicode(isNotified ? POSITIVE : NEGATIVE))
+                        .setCallbackData(String.format("notify_%s_%s", group, isNotified)));
                 rowsInline.add(rowInline);
             });
             markupInline.setKeyboard(rowsInline);

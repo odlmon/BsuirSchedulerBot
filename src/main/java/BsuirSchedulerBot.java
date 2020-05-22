@@ -11,6 +11,9 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import schedule.ScheduleHandler;
 import schedule.SchedulePeriod;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -18,8 +21,9 @@ import java.util.concurrent.TimeUnit;
 
 public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
 
+    private static final String PING_URL = "https://www.google.com";
+    private static final int RATE = 600_000;
     private final ScheduleHandler scheduleHandler = new ScheduleHandler();
-
     public static Map<Long, Map<String, ScheduledExecutorService>> notifiedGroups = new HashMap<>();
 
     public String getBotToken() {
@@ -34,6 +38,22 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
         register(new NotifyCommand());
         register(new HelpCommand());
         restoreNotifiedGroups();
+    }
+
+    public static void startAsync() {
+        Runnable task = () -> {
+            try {
+                URL url = new URL(PING_URL);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.connect();
+                System.out.println("Ping " + url.getHost() + ", OK: response code " + connection.getResponseCode());
+                connection.disconnect();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        };
+        ScheduledExecutorService ses = Executors.newScheduledThreadPool(1);
+        ses.scheduleAtFixedRate(task, 0, RATE, TimeUnit.MILLISECONDS);
     }
 
     private void restoreNotifiedGroups() {
@@ -232,7 +252,8 @@ public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
         var newMessage = new EditMessageText()
                 .setChatId(chatId)
                 .setMessageId((int) messageId)
-                .setText("Изменения успешно применены");
+                .setText(String.format("Вы %s группы %s", isNotified ? "отписались от расписания" :
+                                "подписались на расписание", groupNumber));
         try {
             execute(newMessage);
         } catch (TelegramApiException e) {

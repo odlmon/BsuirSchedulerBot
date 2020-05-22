@@ -11,7 +11,7 @@ import java.util.function.Function;
 
 public class ScheduleHandler {
 
-    private static final String scheduleUrlBase =
+    private static final String SCHEDULE_URL_BASE =
             "https://journal.bsuir.by/api/v1/studentGroup/schedule?studentGroup=";
 
     private String parseDaySchedule(JSONArray schedule, String currentWeekNumber) {
@@ -50,7 +50,7 @@ public class ScheduleHandler {
 
     private Schedule getSchedule(String groupNumber, String weekNumber) {
         try {
-            JSONObject jsonObject = UrlReader.readJsonFromUrl(scheduleUrlBase + groupNumber);
+            JSONObject jsonObject = UrlReader.readJsonFromUrl(SCHEDULE_URL_BASE + groupNumber);
             if (jsonObject != null) {
                 if (weekNumber == null) {
                     weekNumber = jsonObject.getNumber("currentWeekNumber").toString();
@@ -70,7 +70,7 @@ public class ScheduleHandler {
     }
 
     public boolean isGroupExists(String groupNumber) {
-        JSONObject jsonObject = UrlReader.readJsonFromUrl(scheduleUrlBase + groupNumber);
+        JSONObject jsonObject = UrlReader.readJsonFromUrl(SCHEDULE_URL_BASE + groupNumber);
         return jsonObject != null;
     }
 
