@@ -1,3 +1,5 @@
+package core;
+
 import command.*;
 import database.DatabaseManager;
 import org.telegram.telegrambots.extensions.bots.commandbot.TelegramLongPollingCommandBot;

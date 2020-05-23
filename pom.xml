@@ -36,7 +36,7 @@
                 <configuration>
                     <appName>bsuirschedulerbot</appName>
                     <processTypes>
-                        <web>java $JAVA_OPTS -cp target/classes:target/dependency/* Main</web>
+                        <web>java $JAVA_OPTS -cp target/classes:target/dependency/* core.Main</web>
                     </processTypes>
                     <jdkVersion>14</jdkVersion>
                 </configuration>
