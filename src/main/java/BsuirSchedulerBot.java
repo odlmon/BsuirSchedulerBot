@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class BsuirSchedulerBot extends TelegramLongPollingCommandBot {
 
     private static final String PING_URL = "https://www.google.com";
-    private static final int RATE = 600_000;
+    private static final int RATE = 120_000;
     private final ScheduleHandler scheduleHandler = new ScheduleHandler();
     public static Map<Long, Map<String, ScheduledExecutorService>> notifiedGroups = new HashMap<>();
 
