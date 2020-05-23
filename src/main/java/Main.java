@@ -21,6 +21,7 @@ public class Main {
         }
         BsuirSchedulerBot.startAsync();
         System.out.println(Charset.defaultCharset());
+        System.out.println("Ну че пацаны UTF-8 хуле блять");
         try (var serverSocket = new ServerSocket(Integer.parseInt(PORT))) {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
