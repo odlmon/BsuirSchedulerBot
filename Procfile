@@ -1,1 +1,1 @@
-web: java $JAVA_OPTS -cp target/classes:target/dependency/* core.Main
+java -jar target/BsuirSchedulerBot-1.0-SNAPSHOT-jar-with-dependencies.jar
