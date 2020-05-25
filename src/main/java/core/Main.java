@@ -7,7 +7,6 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.Charset;
 
 public class Main {
 
@@ -21,9 +20,6 @@ public class Main {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
-        BsuirSchedulerBot.startAsync();
-        System.out.println(Charset.defaultCharset());
-        System.out.println("Ну че пацаны UTF-8 хуле блять");
         try (var serverSocket = new ServerSocket(Integer.parseInt(PORT))) {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
